@@ -40,11 +40,16 @@ function (angular, _, dateMath, moment) {
     }
 
     var GRANULARITIES = [
+      ['second', moment.duration(1, 'second')],
       ['minute', moment.duration(1, 'minute')],
       ['fifteen_minute', moment.duration(15, 'minute')],
       ['thirty_minute', moment.duration(30, 'minute')],
       ['hour', moment.duration(1, 'hour')],
-      ['day', moment.duration(1, 'day')]
+      ['day', moment.duration(1, 'day')],
+      ['week', moment.duration(1, 'week')],
+      ['month', moment.duration(1, 'month')],
+      ['quarter', moment.duration(1, 'quarter')],
+      ['year', moment.duration(1, 'year')]
     ];
 
     var filterTemplateExpanders = {
@@ -116,9 +121,6 @@ function (angular, _, dateMath, moment) {
       var from = dateToMoment(options.range.from, false);
       var to = dateToMoment(options.range.to, true);
 
-      console.log("Do query");
-      console.log(options);
-
       var promises = options.targets.map(function (target) {
         if (target.hide===true || _.isEmpty(target.druidDS) || (_.isEmpty(target.aggregators) && target.queryType !== "select")) {
           console.log("target.hide: " + target.hide + ", target.druidDS: " + target.druidDS + ", target.aggregators: " + target.aggregators);
@@ -147,9 +149,17 @@ function (angular, _, dateMath, moment) {
     };
 
     this._doQuery = function (from, to, granularity, target) {
+
+      function splitCardinalityFields(aggregator) {
+        if (aggregator.type === 'cardinality' && typeof aggregator.fieldNames === 'string') {
+          aggregator.fieldNames = aggregator.fieldNames.split(',')
+        }
+        return aggregator;
+      }
+
       var datasource = target.druidDS;
       var filters = target.filters;
-      var aggregators = target.aggregators;
+      var aggregators = target.aggregators.map(splitCardinalityFields);
       var postAggregators = target.postAggregators;
       var groupBy = _.map(target.groupBy, (e) => { return templateSrv.replace(e) });
       var limitSpec = null;

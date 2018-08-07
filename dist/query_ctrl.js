@@ -35,6 +35,7 @@ System.register(['lodash', './sdk/sdk'], function(exports_1) {
                     };
                     this.aggregatorValidators = {
                         "count": this.validateCountAggregator,
+                        "cardinality": lodash_1["default"].partial(this.validateCardinalityAggregator.bind(this), 'cardinality'),
                         "longSum": lodash_1["default"].partial(this.validateSimpleAggregator.bind(this), 'longSum'),
                         "doubleSum": lodash_1["default"].partial(this.validateSimpleAggregator.bind(this), 'doubleSum'),
                         "approxHistogramFold": this.validateApproxHistogramFoldAggregator.bind(this),
@@ -52,7 +53,7 @@ System.register(['lodash', './sdk/sdk'], function(exports_1) {
                     this.defaultFilterType = "selector";
                     this.defaultAggregatorType = "count";
                     this.defaultPostAggregator = { type: 'arithmetic', 'fn': '+' };
-                    this.customGranularities = ['minute', 'fifteen_minute', 'thirty_minute', 'hour', 'day', 'all'];
+                    this.customGranularities = ['second', 'minute', 'fifteen_minute', 'thirty_minute', 'hour', 'day', 'week', 'month', 'quarter', 'year', 'all'];
                     this.defaultCustomGranularity = 'minute';
                     this.defaultSelectDimension = "";
                     this.defaultSelectMetric = "";
@@ -102,6 +103,12 @@ System.register(['lodash', './sdk/sdk'], function(exports_1) {
                         return _this.datasource.getDimensionsAndMetrics(_this.target.druidDS)
                             .then(function (dimsAndMetrics) {
                             callback(dimsAndMetrics.metrics);
+                        });
+                    };
+                    this.getMetricsPlusDimensions = function (query, callback) {
+                        return _this.datasource.getDimensionsAndMetrics(_this.target.druidDS)
+                            .then(function (dimsAndMetrics) {
+                            callback([].concat(dimsAndMetrics.metrics).concat(dimsAndMetrics.dimensions));
                         });
                     };
                     this.getDimensionsAndMetrics = function (query, callback) {
@@ -390,6 +397,12 @@ System.register(['lodash', './sdk/sdk'], function(exports_1) {
                 DruidQueryCtrl.prototype.validateCountAggregator = function (target) {
                     if (!target.currentAggregator.name) {
                         return "Must provide an output name for count aggregator.";
+                    }
+                    return null;
+                };
+                DruidQueryCtrl.prototype.validateCardinalityAggregator = function (type, target) {
+                    if (!target.currentAggregator.name) {
+                        return "Must provide an output name for " + type + " aggregator.";
                     }
                     return null;
                 };
