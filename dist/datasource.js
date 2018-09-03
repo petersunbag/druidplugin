@@ -33,18 +33,32 @@ function (angular, _, dateMath, moment) {
     this.periodGranularity = instanceSettings.jsonData.periodGranularity;
 
     function replaceTemplateValues(obj, attrList) {
-      var substitutedVals = attrList.map(function (attr) {
-        return templateSrv.replace(obj[attr]);
-      });
+      if (obj.type === 'in') {
+        var substitutedVals = _.chain(attrList)
+          .map(attr => { return templateSrv.replace(obj[attr]).replace(/[{}]/g, "") })
+          .map(val => { return val.split(',') })
+          .value().flatten();
+        substitutedVals = [substitutedVals];
+      } else {
+        var substitutedVals = attrList.map(function (attr) {
+          return templateSrv.replace(obj[attr]);
+        });
+      }
+
       return _.assign(_.clone(obj, true), _.zipObject(attrList, substitutedVals));
     }
 
     var GRANULARITIES = [
+      ['second', moment.duration(1, 'second')],
       ['minute', moment.duration(1, 'minute')],
       ['fifteen_minute', moment.duration(15, 'minute')],
       ['thirty_minute', moment.duration(30, 'minute')],
       ['hour', moment.duration(1, 'hour')],
-      ['day', moment.duration(1, 'day')]
+      ['day', moment.duration(1, 'day')],
+      ['week', moment.duration(1, 'week')],
+      ['month', moment.duration(1, 'month')],
+      ['quarter', moment.duration(1, 'quarter')],
+      ['year', moment.duration(1, 'year')]
     ];
 
     var filterTemplateExpanders = {
@@ -52,6 +66,7 @@ function (angular, _, dateMath, moment) {
       "regex": _.partialRight(replaceTemplateValues, ['pattern']),
       "javascript": _.partialRight(replaceTemplateValues, ['function']),
       "search": _.partialRight(replaceTemplateValues, []),
+      "in": _.partialRight(replaceTemplateValues, ['values'])
     };
 
     this.testDatasource = function() {
