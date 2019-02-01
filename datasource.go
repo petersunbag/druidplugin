@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -141,13 +142,19 @@ func (t *DruidDatasource) Query(ctx context.Context, tsdbReq *datasource.Datasou
 		println(err)
 	}
 
-	t.logger.Error("Query", "Payload", string(payloadBytes))
+	reqBody := string(payloadBytes)
+	if filters_len == 0 {
+		reg := regexp.MustCompile(`,"filter":{}`)
+		reqBody = reg.ReplaceAllString(reqBody, "")
+	}
+
+	t.logger.Error("Query", "Payload", reqBody)
 
 	url := "http://10.151.157.167:8082/druid/v2/?pretty"
 
 	//Request
 
-	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(payloadBytes)))
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(reqBody))
 
 	if err != nil {
 		// handle err
