@@ -62,6 +62,17 @@ type TimeSeriesPayload struct {
 	Filters      Filter        `json:"filter,omitempty"`
 }
 
+type Column struct {
+	Dimension string `json:"dimension,omitempty"`
+	Direction string `json:"direction,omitempty"`
+}
+
+type LimitSpec struct {
+	Type    string   `json:"type,omitempty"`
+	Limit   int      `json:"limit,omitempty"`
+	Columns []Column `json:"columns,omitempty"`
+}
+
 type GroupByPayload struct {
 	QueryType    string        `json:"queryType"`
 	DataSource   string        `json:"dataSource"`
@@ -70,6 +81,7 @@ type GroupByPayload struct {
 	Aggregations []Aggregation `json:"aggregations"`
 	Intervals    []string      `json:"intervals"`
 	Filters      Filter        `json:"filter,omitempty"`
+	LimitSpec    LimitSpec     `json:"limitSpec,omitempty"`
 }
 
 var aggregationName = ""
@@ -114,9 +126,6 @@ func (t *DruidDatasource) handleTimeSeries(tsdbReq *datasource.DatasourceRequest
 
 	from := time.Unix(int64(FromEpochMs), 0).Format(time.RFC3339)[0:19] + "Z"
 	to := time.Unix(int64(ToEpochMs), 0).Format(time.RFC3339)[0:19] + "Z"
-
-	t.logger.Debug("Query", "Intervals", from)
-	t.logger.Debug("Query", "Intervals", to)
 
 	modelJson, jsonerr := simplejson.NewJson([]byte(tsdbReq.Queries[0].ModelJson))
 	if jsonerr != nil {
@@ -192,18 +201,17 @@ func (t *DruidDatasource) handleGroupBy(tsdbReq *datasource.DatasourceRequest) (
 	from := time.Unix(int64(FromEpochMs), 0).Format(time.RFC3339)[0:19] + "Z"
 	to := time.Unix(int64(ToEpochMs), 0).Format(time.RFC3339)[0:19] + "Z"
 
-	t.logger.Debug("groupby Query", "Intervals", from)
-	t.logger.Debug("groupby Query", "Intervals", to)
-
 	modelJson, jsonerr := simplejson.NewJson([]byte(tsdbReq.Queries[0].ModelJson))
 	if jsonerr != nil {
 	}
 
-	t.logger.Debug("groupby Query", "Model Json", modelJson)
+	t.logger.Debug("Query", "Model Json", modelJson)
 
 	datasourceName := modelJson.Get("druidDS").MustString()
 	granularity := modelJson.Get("customGranularity").MustString()
-	dimensions := modelJson.Get("dimensions").MustArray()
+	dimensions := modelJson.Get("groupBy").MustArray()
+	limit := modelJson.Get("limit").MustInt()
+	orderby := modelJson.Get("orderBy").MustStringArray()
 	queryType := modelJson.Get("queryType").MustString()
 	aggregationName = modelJson.Get("aggregators").GetIndex(0).Get("name").MustString()
 	aggregationType := modelJson.Get("aggregators").GetIndex(0).Get("type").MustString()
@@ -231,6 +239,19 @@ func (t *DruidDatasource) handleGroupBy(tsdbReq *datasource.DatasourceRequest) (
 		filter.Value = modelJson.Get("filters").GetIndex(0).Get("value").MustString()
 	}
 
+	var limitspec LimitSpec
+	limitspec.Columns = make([]Column, len(orderby))
+
+	for i := 0; i < len(orderby); i++ {
+		limitspec.Columns[i] = Column{
+			Dimension: orderby[i],
+			Direction: "DESCENDING",
+		}
+	}
+
+	limitspec.Limit = limit
+	limitspec.Type = "default"
+
 	data := &GroupByPayload{
 		QueryType:    queryType,
 		DataSource:   datasourceName,
@@ -239,6 +260,7 @@ func (t *DruidDatasource) handleGroupBy(tsdbReq *datasource.DatasourceRequest) (
 		Aggregations: []Aggregation{{aggregationType, aggregationFieldName, aggregationName}},
 		Intervals:    []string{from + "/" + to},
 		Filters:      Filter{filter.Type, filter.Dimension, filter.Value, filter.Fields},
+		LimitSpec:    limitspec,
 	}
 
 	payloadBytes, err := json.Marshal(data)
