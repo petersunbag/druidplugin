@@ -53,9 +53,19 @@ type Filter struct {
 	Fields    []Fields `json:"fields,omitempty"`
 }
 
-type Payload struct {
+type TimeSeriesPayload struct {
 	QueryType    string        `json:"queryType"`
 	DataSource   string        `json:"dataSource"`
+	Granularity  string        `json:"granularity"`
+	Aggregations []Aggregation `json:"aggregations"`
+	Intervals    []string      `json:"intervals"`
+	Filters      Filter        `json:"filter,omitempty"`
+}
+
+type GroupByPayload struct {
+	QueryType    string        `json:"queryType"`
+	DataSource   string        `json:"dataSource"`
+	Dimensions   []interface{} `json:"dimensions"`
 	Granularity  string        `json:"granularity"`
 	Aggregations []Aggregation `json:"aggregations"`
 	Intervals    []string      `json:"intervals"`
@@ -79,7 +89,11 @@ func (t *DruidDatasource) Query(ctx context.Context, tsdbReq *datasource.Datasou
 
 	switch queryType {
 	case "timeseries":
-		response, err = t.handleTimeseries(tsdbReq)
+		response, err = t.handleTimeSeries(tsdbReq)
+		if err != nil {
+		}
+	case "groupBy":
+		response, err = t.handleGroupBy(tsdbReq)
 		if err != nil {
 		}
 	}
@@ -87,7 +101,7 @@ func (t *DruidDatasource) Query(ctx context.Context, tsdbReq *datasource.Datasou
 	return response, nil
 }
 
-func (t *DruidDatasource) handleTimeseries(tsdbReq *datasource.DatasourceRequest) (*datasource.DatasourceResponse, error) {
+func (t *DruidDatasource) handleTimeSeries(tsdbReq *datasource.DatasourceRequest) (*datasource.DatasourceResponse, error) {
 
 	//Input data
 
@@ -139,7 +153,7 @@ func (t *DruidDatasource) handleTimeseries(tsdbReq *datasource.DatasourceRequest
 		filter.Value = modelJson.Get("filters").GetIndex(0).Get("value").MustString()
 	}
 
-	data := &Payload{
+	data := &TimeSeriesPayload{
 		QueryType:    queryType,
 		DataSource:   datasourceName,
 		Granularity:  granularity,
@@ -161,10 +175,89 @@ func (t *DruidDatasource) handleTimeseries(tsdbReq *datasource.DatasourceRequest
 
 	t.logger.Error("Query", "Payload", reqBody)
 	url := tsdbReq.Datasource.Url + "/druid/v2"
-	return t.makeRequest(reqBody, url)
+	return t.makeRequest(reqBody, url, queryType)
 
 }
-func (t *DruidDatasource) makeRequest(reqBody string, url string) (*datasource.DatasourceResponse, error) {
+func (t *DruidDatasource) handleGroupBy(tsdbReq *datasource.DatasourceRequest) (*datasource.DatasourceResponse, error) {
+
+	//Input data
+
+	var FromEpochMs, error1 = strconv.ParseInt(strconv.FormatInt(tsdbReq.TimeRange.FromEpochMs, 10)[0:10], 10, 64)
+	var ToEpochMs, error2 = strconv.ParseInt(strconv.FormatInt(tsdbReq.TimeRange.ToEpochMs, 10)[0:10], 10, 64)
+	if error1 != nil {
+	}
+	if error2 != nil {
+	}
+
+	from := time.Unix(int64(FromEpochMs), 0).Format(time.RFC3339)[0:19] + "Z"
+	to := time.Unix(int64(ToEpochMs), 0).Format(time.RFC3339)[0:19] + "Z"
+
+	t.logger.Debug("groupby Query", "Intervals", from)
+	t.logger.Debug("groupby Query", "Intervals", to)
+
+	modelJson, jsonerr := simplejson.NewJson([]byte(tsdbReq.Queries[0].ModelJson))
+	if jsonerr != nil {
+	}
+
+	t.logger.Debug("groupby Query", "Model Json", modelJson)
+
+	datasourceName := modelJson.Get("druidDS").MustString()
+	granularity := modelJson.Get("customGranularity").MustString()
+	dimensions := modelJson.Get("dimensions").MustArray()
+	queryType := modelJson.Get("queryType").MustString()
+	aggregationName = modelJson.Get("aggregators").GetIndex(0).Get("name").MustString()
+	aggregationType := modelJson.Get("aggregators").GetIndex(0).Get("type").MustString()
+	aggregationFieldName := modelJson.Get("aggregators").GetIndex(0).Get("fieldName").MustString()
+
+	filters_len := len(modelJson.Get("filters").MustArray())
+	t.logger.Debug("debug", "filter len", filters_len)
+
+	var filter Filter
+
+	if filters_len > 1 {
+		filter.Type = "and"
+		filter.Fields = make([]Fields, filters_len)
+		for i := range filter.Fields {
+			filter.Fields[i] = Fields{
+				modelJson.Get("filters").GetIndex(i).Get("type").MustString(),
+				modelJson.Get("filters").GetIndex(i).Get("dimension").MustString(),
+				modelJson.Get("filters").GetIndex(i).Get("value").MustString(),
+			}
+		}
+	}
+	if filters_len == 1 {
+		filter.Type = modelJson.Get("filters").GetIndex(0).Get("type").MustString()
+		filter.Dimension = modelJson.Get("filters").GetIndex(0).Get("dimension").MustString()
+		filter.Value = modelJson.Get("filters").GetIndex(0).Get("value").MustString()
+	}
+
+	data := &GroupByPayload{
+		QueryType:    queryType,
+		DataSource:   datasourceName,
+		Dimensions:   dimensions,
+		Granularity:  granularity,
+		Aggregations: []Aggregation{{aggregationType, aggregationFieldName, aggregationName}},
+		Intervals:    []string{from + "/" + to},
+		Filters:      Filter{filter.Type, filter.Dimension, filter.Value, filter.Fields},
+	}
+
+	payloadBytes, err := json.Marshal(data)
+	if err != nil {
+		println(err)
+	}
+
+	reqBody := string(payloadBytes)
+	if filters_len == 0 {
+		reg := regexp.MustCompile(`,"filter":{}`)
+		reqBody = reg.ReplaceAllString(reqBody, "")
+	}
+
+	t.logger.Error("Query", "Payload", reqBody)
+	url := tsdbReq.Datasource.Url + "/druid/v2"
+	return t.makeRequest(reqBody, url, queryType)
+
+}
+func (t *DruidDatasource) makeRequest(reqBody string, url string, queryType string) (*datasource.DatasourceResponse, error) {
 
 	//Request
 	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(reqBody))
@@ -185,9 +278,9 @@ func (t *DruidDatasource) makeRequest(reqBody string, url string) (*datasource.D
 	if resp.StatusCode != http.StatusOK {
 		fmt.Errorf("invalid status code. status: %v", resp.Status)
 	}
-	return t.parseResponse(resp)
+	return t.parseResponse(resp, queryType)
 }
-func (t *DruidDatasource) parseResponse(resp *http.Response) (*datasource.DatasourceResponse, error) {
+func (t *DruidDatasource) parseResponse(resp *http.Response, queryType string) (*datasource.DatasourceResponse, error) {
 	//Response
 
 	t.logger.Debug("parseResponse", "test", aggregationName)
@@ -212,24 +305,45 @@ func (t *DruidDatasource) parseResponse(resp *http.Response) (*datasource.Dataso
 	serie := &datasource.TimeSeries{Name: "druid"}
 
 	response_len := len(res)
-	for i := 0; i < response_len; i++ {
 
-		fmt.Println(i)
+	switch queryType {
 
-		timestamp, err := time.Parse(time.RFC3339, res[i]["timestamp"].(string))
-		result := res[i]["result"]
+	case "timeseries":
+		for i := 0; i < response_len; i++ {
 
-		t.logger.Debug("Query", "Timestamp", timestamp)
-		t.logger.Debug("Query", "Result", result)
+			timestamp, err := time.Parse(time.RFC3339, res[i]["timestamp"].(string))
+			result := res[i]["result"]
 
-		//timestamp,err:=strconv.ParseInt(r.Timestamp, 10, 64)
-		if err != nil {
-			t.logger.Error("Query", "Response points err", err)
+			t.logger.Debug("Query", "Timestamp", timestamp)
+			t.logger.Debug("Query", "Result", result)
+
+			//timestamp,err:=strconv.ParseInt(r.Timestamp, 10, 64)
+			if err != nil {
+				t.logger.Error("Query", "Response points err", err)
+			}
+			serie.Points = append(serie.Points, &datasource.Point{
+				Timestamp: timestamp.Unix(),
+				Value:     result.(map[string]interface{})[aggregationName].(float64),
+			})
 		}
-		serie.Points = append(serie.Points, &datasource.Point{
-			Timestamp: timestamp.Unix(),
-			Value:     result.(map[string]interface{})[aggregationName].(float64),
-		})
+	case "groupBy":
+		for i := 0; i < response_len; i++ {
+
+			timestamp, err := time.Parse(time.RFC3339, res[i]["timestamp"].(string))
+			result := res[i]["event"]
+
+			t.logger.Debug("Query", "Timestamp", timestamp)
+			t.logger.Debug("Query", "Result", result)
+
+			if err != nil {
+				t.logger.Error("Query", "Response points err", err)
+			}
+			serie.Points = append(serie.Points, &datasource.Point{
+				Timestamp: timestamp.Unix(),
+				Value:     result.(map[string]interface{})[aggregationName].(float64),
+			})
+		}
+
 	}
 
 	qr.Series = append(qr.Series, serie)
