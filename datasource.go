@@ -41,15 +41,19 @@ type Aggregation struct {
 }
 
 type Fields struct {
-	FieldsType string `json:"type"`
-	Dimension  string `json:"dimension"`
-	Value      string `json:"value"`
+	FieldsType string   `json:"type"`
+	Dimension  string   `json:"dimension"`
+	Value      string   `json:"value"`
+	Pattern    string   `json:"pattern"`
+	InValues   []string `json:"values"`
 }
 
 type Filter struct {
 	Type      string   `json:"type,omitempty"`
 	Dimension string   `json:"dimension,omitempty"`
 	Value     string   `json:"value,omitempty"`
+	Pattern   string   `json:"pattern,omitempty"`
+	InValues  []string `json:"values,omitempty"`
 	Fields    []Fields `json:"fields,omitempty"`
 }
 
@@ -142,17 +146,32 @@ func (t *DruidDatasource) handleQuery(tsdbReq *datasource.DatasourceRequest) (*d
 		filter.Type = "and"
 		filter.Fields = make([]Fields, filters_len)
 		for i := range filter.Fields {
+			fieldType := modelJson.Get("filters").GetIndex(i).Get("type").MustString()
 			filter.Fields[i] = Fields{
-				modelJson.Get("filters").GetIndex(i).Get("type").MustString(),
-				modelJson.Get("filters").GetIndex(i).Get("dimension").MustString(),
-				modelJson.Get("filters").GetIndex(i).Get("value").MustString(),
+				FieldsType: fieldType,
+				Dimension:  modelJson.Get("filters").GetIndex(i).Get("dimension").MustString(),
 			}
+			if fieldType == "selector" {
+				filter.Fields[i].Value = modelJson.Get("filters").GetIndex(i).Get("value").MustString()
+			} else if fieldType == "regex" {
+				filter.Fields[i].Pattern = modelJson.Get("filters").GetIndex(i).Get("pattern").MustString()
+			} else if fieldType == "in" {
+				filter.Fields[i].InValues = strings.Split(modelJson.Get("filters").GetIndex(i).Get("values").MustString(), ",")
+
+			}
+
 		}
 	}
 	if filters_len == 1 {
 		filter.Type = modelJson.Get("filters").GetIndex(0).Get("type").MustString()
 		filter.Dimension = modelJson.Get("filters").GetIndex(0).Get("dimension").MustString()
-		filter.Value = modelJson.Get("filters").GetIndex(0).Get("value").MustString()
+		if filter.Type == "selector" {
+			filter.Value = modelJson.Get("filters").GetIndex(0).Get("value").MustString()
+		} else if filter.Type == "regex" {
+			filter.Pattern = modelJson.Get("filters").GetIndex(0).Get("pattern").MustString()
+		} else if filter.Type == "in" {
+			filter.InValues = strings.Split(modelJson.Get("filters").GetIndex(0).Get("values").MustString(), ",")
+		}
 	}
 
 	//Query
@@ -171,7 +190,7 @@ func (t *DruidDatasource) handleQuery(tsdbReq *datasource.DatasourceRequest) (*d
 				Granularity:  granularity,
 				Aggregations: []Aggregation{{aggregationType, aggregationFieldName, aggregationName}},
 				Intervals:    []string{from + "/" + to},
-				Filters:      Filter{filter.Type, filter.Dimension, filter.Value, filter.Fields},
+				Filters:      Filter{filter.Type, filter.Dimension, filter.Value, filter.Pattern, filter.InValues, filter.Fields},
 			}
 
 			payloadBytes, err = json.Marshal(data)
@@ -209,7 +228,7 @@ func (t *DruidDatasource) handleQuery(tsdbReq *datasource.DatasourceRequest) (*d
 				Granularity:  granularity,
 				Aggregations: []Aggregation{{aggregationType, aggregationFieldName, aggregationName}},
 				Intervals:    []string{from + "/" + to},
-				Filters:      Filter{filter.Type, filter.Dimension, filter.Value, filter.Fields},
+				Filters:      Filter{filter.Type, filter.Dimension, filter.Value, filter.Pattern, filter.InValues, filter.Fields},
 				LimitSpec:    limitspec,
 			}
 
