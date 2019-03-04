@@ -96,24 +96,15 @@ func (t *DruidDatasource) Query(ctx context.Context, tsdbReq *datasource.Datasou
 	if jsonerr != nil {
 	}
 
-	queryType := modelJson.Get("queryType").MustString()
 	t.logger.Debug("Query", "Model Json type", reflect.TypeOf(modelJson))
 
-	switch queryType {
-	case "timeseries":
-		response, err = t.handleTimeSeries(tsdbReq)
-		if err != nil {
-		}
-	case "groupBy":
-		response, err = t.handleGroupBy(tsdbReq)
-		if err != nil {
-		}
+	response, err = t.handleQuery(tsdbReq)
+	if err != nil {
 	}
 
 	return response, nil
 }
-
-func (t *DruidDatasource) handleTimeSeries(tsdbReq *datasource.DatasourceRequest) (*datasource.DatasourceResponse, error) {
+func (t *DruidDatasource) handleQuery(tsdbReq *datasource.DatasourceRequest) (*datasource.DatasourceResponse, error) {
 
 	//Input data
 
@@ -143,82 +134,7 @@ func (t *DruidDatasource) handleTimeSeries(tsdbReq *datasource.DatasourceRequest
 	filters_len := len(modelJson.Get("filters").MustArray())
 	t.logger.Debug("debug", "filter len", filters_len)
 
-	var filter Filter
-
-	if filters_len > 1 {
-		filter.Type = "and"
-		filter.Fields = make([]Fields, filters_len)
-		for i := range filter.Fields {
-			filter.Fields[i] = Fields{
-				modelJson.Get("filters").GetIndex(i).Get("type").MustString(),
-				modelJson.Get("filters").GetIndex(i).Get("dimension").MustString(),
-				modelJson.Get("filters").GetIndex(i).Get("value").MustString(),
-			}
-		}
-	}
-	if filters_len == 1 {
-		filter.Type = modelJson.Get("filters").GetIndex(0).Get("type").MustString()
-		filter.Dimension = modelJson.Get("filters").GetIndex(0).Get("dimension").MustString()
-		filter.Value = modelJson.Get("filters").GetIndex(0).Get("value").MustString()
-	}
-
-	data := &TimeSeriesPayload{
-		QueryType:    queryType,
-		DataSource:   datasourceName,
-		Granularity:  granularity,
-		Aggregations: []Aggregation{{aggregationType, aggregationFieldName, aggregationName}},
-		Intervals:    []string{from + "/" + to},
-		Filters:      Filter{filter.Type, filter.Dimension, filter.Value, filter.Fields},
-	}
-
-	payloadBytes, err := json.Marshal(data)
-	if err != nil {
-		println(err)
-	}
-
-	reqBody := string(payloadBytes)
-	if filters_len == 0 {
-		reg := regexp.MustCompile(`,"filter":{}`)
-		reqBody = reg.ReplaceAllString(reqBody, "")
-	}
-
-	t.logger.Error("Query", "Payload", reqBody)
-	url := tsdbReq.Datasource.Url + "/druid/v2"
-	return t.makeRequest(reqBody, url, queryType)
-
-}
-func (t *DruidDatasource) handleGroupBy(tsdbReq *datasource.DatasourceRequest) (*datasource.DatasourceResponse, error) {
-
-	//Input data
-
-	var FromEpochMs, error1 = strconv.ParseInt(strconv.FormatInt(tsdbReq.TimeRange.FromEpochMs, 10)[0:10], 10, 64)
-	var ToEpochMs, error2 = strconv.ParseInt(strconv.FormatInt(tsdbReq.TimeRange.ToEpochMs, 10)[0:10], 10, 64)
-	if error1 != nil {
-	}
-	if error2 != nil {
-	}
-
-	from := time.Unix(int64(FromEpochMs), 0).Format(time.RFC3339)[0:19] + "Z"
-	to := time.Unix(int64(ToEpochMs), 0).Format(time.RFC3339)[0:19] + "Z"
-
-	modelJson, jsonerr := simplejson.NewJson([]byte(tsdbReq.Queries[0].ModelJson))
-	if jsonerr != nil {
-	}
-
-	t.logger.Debug("Query", "Model Json", modelJson)
-
-	datasourceName := modelJson.Get("druidDS").MustString()
-	granularity := modelJson.Get("customGranularity").MustString()
-	dimensions := modelJson.Get("groupBy").MustArray()
-	limit := modelJson.Get("limit").MustInt()
-	orderby := modelJson.Get("orderBy").MustStringArray()
-	queryType := modelJson.Get("queryType").MustString()
-	aggregationName = modelJson.Get("aggregators").GetIndex(0).Get("name").MustString()
-	aggregationType := modelJson.Get("aggregators").GetIndex(0).Get("type").MustString()
-	aggregationFieldName := modelJson.Get("aggregators").GetIndex(0).Get("fieldName").MustString()
-
-	filters_len := len(modelJson.Get("filters").MustArray())
-	t.logger.Debug("debug", "filter len", filters_len)
+	//Filters Spec
 
 	var filter Filter
 
@@ -239,33 +155,70 @@ func (t *DruidDatasource) handleGroupBy(tsdbReq *datasource.DatasourceRequest) (
 		filter.Value = modelJson.Get("filters").GetIndex(0).Get("value").MustString()
 	}
 
-	var limitspec LimitSpec
-	limitspec.Columns = make([]Column, len(orderby))
+	//Query
 
-	for i := 0; i < len(orderby); i++ {
-		limitspec.Columns[i] = Column{
-			Dimension: orderby[i],
-			Direction: "DESCENDING",
+	var payloadBytes []byte
+	var err error
+
+	switch queryType {
+
+	case "timeseries":
+		{
+
+			data := &TimeSeriesPayload{
+				QueryType:    queryType,
+				DataSource:   datasourceName,
+				Granularity:  granularity,
+				Aggregations: []Aggregation{{aggregationType, aggregationFieldName, aggregationName}},
+				Intervals:    []string{from + "/" + to},
+				Filters:      Filter{filter.Type, filter.Dimension, filter.Value, filter.Fields},
+			}
+
+			payloadBytes, err = json.Marshal(data)
+			if err != nil {
+				println(err)
+			}
 		}
-	}
 
-	limitspec.Limit = limit
-	limitspec.Type = "default"
+	case "groupBy":
+		{
 
-	data := &GroupByPayload{
-		QueryType:    queryType,
-		DataSource:   datasourceName,
-		Dimensions:   dimensions,
-		Granularity:  granularity,
-		Aggregations: []Aggregation{{aggregationType, aggregationFieldName, aggregationName}},
-		Intervals:    []string{from + "/" + to},
-		Filters:      Filter{filter.Type, filter.Dimension, filter.Value, filter.Fields},
-		LimitSpec:    limitspec,
-	}
+			dimensions := modelJson.Get("groupBy").MustArray()
+			limit := modelJson.Get("limit").MustInt()
+			orderby := modelJson.Get("orderBy").MustStringArray()
 
-	payloadBytes, err := json.Marshal(data)
-	if err != nil {
-		println(err)
+			var limitspec LimitSpec
+			limitspec.Columns = make([]Column, len(orderby))
+
+			for i := 0; i < len(orderby); i++ {
+				limitspec.Columns[i] = Column{
+					Dimension: orderby[i],
+					Direction: "DESCENDING",
+				}
+			}
+
+			//Limit and Order Spec
+
+			limitspec.Limit = limit
+			limitspec.Type = "default"
+
+			data := &GroupByPayload{
+				QueryType:    queryType,
+				DataSource:   datasourceName,
+				Dimensions:   dimensions,
+				Granularity:  granularity,
+				Aggregations: []Aggregation{{aggregationType, aggregationFieldName, aggregationName}},
+				Intervals:    []string{from + "/" + to},
+				Filters:      Filter{filter.Type, filter.Dimension, filter.Value, filter.Fields},
+				LimitSpec:    limitspec,
+			}
+
+			payloadBytes, err = json.Marshal(data)
+			if err != nil {
+				println(err)
+			}
+		}
+
 	}
 
 	reqBody := string(payloadBytes)
