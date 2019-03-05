@@ -88,6 +88,19 @@ type GroupByPayload struct {
 	LimitSpec    LimitSpec     `json:"limitSpec,omitempty"`
 }
 
+type TopNPayload struct {
+	QueryType    string        `json:"queryType"`
+	DataSource   string        `json:"dataSource"`
+	Dimensions   string        `json:"dimension"`
+	Granularity  string        `json:"granularity"`
+	Aggregations []Aggregation `json:"aggregations"`
+	Intervals    []string      `json:"intervals"`
+	Filters      Filter        `json:"filter,omitempty"`
+	LimitSpec    LimitSpec     `json:"limitSpec,omitempty"`
+	Threshold    int           `json:"threshold"`
+	Metric       string        `json:"metric"`
+}
+
 var aggregationName = ""
 
 func (t *DruidDatasource) Query(ctx context.Context, tsdbReq *datasource.DatasourceRequest) (*datasource.DatasourceResponse, error) {
@@ -238,6 +251,31 @@ func (t *DruidDatasource) handleQuery(tsdbReq *datasource.DatasourceRequest) (*d
 			}
 		}
 
+	case "topN":
+		{
+			dimensions := modelJson.Get("dimension").MustString()
+			limit := modelJson.Get("limit").MustInt()
+			metric := modelJson.Get("druidMetric").MustString()
+
+			data := &TopNPayload{
+				QueryType:    queryType,
+				DataSource:   datasourceName,
+				Dimensions:   dimensions,
+				Granularity:  granularity,
+				Aggregations: []Aggregation{{aggregationType, aggregationFieldName, aggregationName}},
+				Intervals:    []string{from + "/" + to},
+				Filters:      Filter{filter.Type, filter.Dimension, filter.Value, filter.Pattern, filter.InValues, filter.Fields},
+				Threshold:    limit,
+				Metric:       metric,
+			}
+
+			payloadBytes, err = json.Marshal(data)
+			if err != nil {
+				println(err)
+			}
+
+		}
+
 	}
 
 	reqBody := string(payloadBytes)
@@ -311,7 +349,6 @@ func (t *DruidDatasource) parseResponse(resp *http.Response, queryType string) (
 			t.logger.Debug("Query", "Timestamp", timestamp)
 			t.logger.Debug("Query", "Result", result)
 
-			//timestamp,err:=strconv.ParseInt(r.Timestamp, 10, 64)
 			if err != nil {
 				t.logger.Error("Query", "Response points err", err)
 			}
@@ -338,6 +375,30 @@ func (t *DruidDatasource) parseResponse(resp *http.Response, queryType string) (
 			})
 		}
 
+	case "topN":
+		for i := 0; i < response_len; i++ {
+
+			timestamp, err := time.Parse(time.RFC3339, res[i]["timestamp"].(string))
+			result := res[i]["result"]
+
+			t.logger.Debug("Query", "Timestamp", timestamp)
+			t.logger.Debug("Query", "Result", result)
+			t.logger.Debug("test", "len", reflect.ValueOf(result).Len())
+			var resultMap reflect.Value
+			var value float64
+			if reflect.ValueOf(result).Len() > 0 {
+				resultMap = reflect.ValueOf(result).Index(0)
+				value = resultMap.Interface().(map[string]interface{})[aggregationName].(float64)
+			}
+
+			if err != nil {
+				t.logger.Error("Query", "Response points err", err)
+			}
+			serie.Points = append(serie.Points, &datasource.Point{
+				Timestamp: timestamp.Unix(),
+				Value:     value,
+			})
+		}
 	}
 
 	qr.Series = append(qr.Series, serie)
