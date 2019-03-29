@@ -366,7 +366,10 @@ function (angular, _, dateMath, moment) {
 
                  filter.fields=filter.fields.map(function (filter) {
 
-                   return filterTemplateExpanders[filter.type](filter, scopedVars);
+                   if(filter.fields)
+                    return filterTemplateExpanders[filter.type](filter, scopedVars);
+                   else
+                     return filter
 
                  }).filter(function (filter) {
                    if (filter.pattern)
