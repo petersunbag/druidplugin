@@ -361,47 +361,10 @@ define([
             replacedFilters = replacedFilters.filter(function (filter) {
 
               if(filter.fields){
-
-                filter.fields=filter.fields.map(function (filter) {
-
-                  if(filter.fields)
-                    filter.fields = filter.fields.map(function (filter) {
-
-                      return filterTemplateExpanders[filter.type](filter, scopedVars);
-
-                    }).filter(function (filter) {
-                      if (filter.pattern)
-                        return filter.pattern != "_REMOVE_FILTER_"
-                      else if (filter.value)
-                        return filter.value != "_REMOVE_FILTER_"
-                      else if (filter.values)
-                        return !filter.values.includes("_REMOVE_FILTER_")
-                      else
-                        return true
-                    })
-                  return filter
-
-                }).filter(function (filter) {
-                  if (filter.pattern)
-                    return filter.pattern != "_REMOVE_FILTER_"
-                  else if (filter.value)
-                    return filter.value != "_REMOVE_FILTER_"
-                  else if (filter.values)
-                    return !filter.values.includes("_REMOVE_FILTER_")
-                  else
-                    return true
-                })
-
+                return getNestedFilter(filter,scopedVars)
               }
               else {
-                if (filter.pattern)
-                  return filter.pattern != "_REMOVE_FILTER_"
-                else if (filter.value)
-                  return filter.value != "_REMOVE_FILTER_"
-                else if (filter.values)
-                  return !filter.values.includes("_REMOVE_FILTER_")
-                else
-                  return true
+                  return getFilter(filter)
               }
 
               return true
@@ -419,6 +382,35 @@ define([
             };
           }
           return null;
+        }
+
+        function getNestedFilter(filter,scopedVars){
+
+          filter.fields=filter.fields.map(function (filter) {
+
+            if(filter.fields) {
+              return getNestedFilter(filter)
+            }
+
+            return filter
+
+          }).filter(function (filter) {
+            return getFilter(filter)
+          })
+
+          return filter
+
+        }
+
+        function getFilter(filter){
+          if (filter.pattern)
+            return filter.pattern != "_REMOVE_FILTER_"
+          else if (filter.value)
+            return filter.value != "_REMOVE_FILTER_"
+          else if (filter.values)
+            return !filter.values.includes("_REMOVE_FILTER_")
+          else
+            return true
         }
 
         function getQueryIntervals(from, to) {
