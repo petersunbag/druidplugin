@@ -357,20 +357,8 @@ define([
               });
 
           if (replacedFilters) {
-
-            replacedFilters = replacedFilters.filter(function (filter) {
-
-              if(filter.fields){
-                return getNestedFilter(filter,scopedVars)
-              }
-              else {
-                  return getFilter(filter)
-              }
-
-              return true
-            });
+            replacedFilters = remove_filter_recursively(replacedFilters)
           }
-
 
           if (replacedFilters.length>0) {
             if (replacedFilters.length === 1) {
@@ -384,33 +372,24 @@ define([
           return null;
         }
 
-        function getNestedFilter(filter,scopedVars){
+        function remove_filter_recursively(filters){
 
-          filter.fields=filter.fields.map(function (filter) {
-
+          return filters.map(function(filter){
             if(filter.fields) {
-              return getNestedFilter(filter)
+              filter.fields=remove_filter_recursively(filter.fields)
             }
-
             return filter
+          }).filter(function(filter){
+            if (filter.pattern)
+              return filter.pattern != "_REMOVE_FILTER_"
+            else if (filter.value)
+              return filter.value != "_REMOVE_FILTER_"
+            else if (filter.values)
+              return !filter.values.includes("_REMOVE_FILTER_")
+            else
+              return true
+          });
 
-          }).filter(function (filter) {
-            return getFilter(filter)
-          })
-
-          return filter
-
-        }
-
-        function getFilter(filter){
-          if (filter.pattern)
-            return filter.pattern != "_REMOVE_FILTER_"
-          else if (filter.value)
-            return filter.value != "_REMOVE_FILTER_"
-          else if (filter.values)
-            return !filter.values.includes("_REMOVE_FILTER_")
-          else
-            return true
         }
 
         function getQueryIntervals(from, to) {
