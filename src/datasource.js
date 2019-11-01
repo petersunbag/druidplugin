@@ -61,6 +61,20 @@ function (angular, _, dateMath, moment) {
       ['year', moment.duration(1, 'year')]
     ];
 
+    var GRANULARITIESPERIODLOOKUP = {
+        'second': '1S',
+        'minute': '0H1M',
+        'fifteen_minute': '0H15M',
+        'thirty_minute': '0H30M',
+        'hour': '1H',
+        'day': '1D',
+        'week': '7D',
+        'month': '1M',
+        'quarter': '3M',
+        'year': '1Y'
+    };
+
+
     var filterTemplateExpanders = {
       "selector": _.partialRight(replaceTemplateValues, ['value']),
       "regex": _.partialRight(replaceTemplateValues, ['pattern']),
@@ -82,9 +96,9 @@ function (angular, _, dateMath, moment) {
     };
 
     this.testDatasource = function() {
-      if(this.dataSource.periodOrigin!=""){
-          if(!this.isIsoDate(this.dataSource.periodOrigin)){
-              return { status: "error", message: "Origin time must be in ISO8601 format", title: "Success" };
+      if(this.periodOrigin!=""){
+          if(!this.isIsoDate(this.periodOrigin)){
+              return { status: "error", message: "Origin time must be in ISO8601 (YYYY-MM-DDTHH:MM:SS.sssZ) format", title: "Error" };
           }
       }
       return this._get('/druid/v2/datasources').then(function () {
@@ -172,17 +186,12 @@ function (angular, _, dateMath, moment) {
         //Width of bar chars in Grafana is determined by size of the smallest interval
         var roundedFrom = granularity === "all" ? from : roundUpStartTime(from, granularity);
           if (dataSource.periodGranularity != "") {
-              granularity = {"type": "period", "timeZone": dataSource.periodGranularity}
-              if (granularity === 'day') {
-                  granularity["period"] = "P1D"
-              } else if (granularity === 'week') {
-                  granularity["period"] = "P1W"
-              } else if (granularity === 'month') {
-                  granularity["period"] = "P1M"
-              }
+            if(granularity in GRANULARITIESPERIODLOOKUP){
+              granularity = {"type": "period", "period": GRANULARITIESPERIODLOOKUP[granularity], "timeZone": dataSource.periodGranularity}
               if (dataSource.periodOrigin != "") {
-                  granularity["origin"] = dataSource.periodOrigin
+                granularity["origin"] = dataSource.periodOrigin
               }
+            }
         }
         return dataSource._doQuery(roundedFrom, to, granularity, target, options.scopedVars);
       });
