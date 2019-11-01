@@ -119,6 +119,13 @@
             <info-popover mode="right-absolute">This enables the to query hourly data in different timezone.</info-popover>
         </div>
     </div>
+    <div class="gf-form max-width-70">
+        <span class="gf-form-label">Period Origin</span>
+        <div class="gf-form-select-wrapper gf-form-select-wrapper--has-help-icon max-width-50">
+            <input type="text" class="gf-form-input" ng-model="ctrl.current.jsonData.periodOrigin" spellcheck='false'  />
+            <info-popover mode="right-absolute">This enables the to query to compute from a different epoch start, useful to start week from Sunday.</info-popover>
+        </div>
+    </div>
 </div>
 
 

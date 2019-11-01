@@ -31,6 +31,7 @@ function (angular, _, dateMath, moment) {
     instanceSettings.jsonData = instanceSettings.jsonData || {};
     this.supportMetrics = true;
     this.periodGranularity = instanceSettings.jsonData.periodGranularity;
+    this.periodOrigin = instanceSettings.jsonData.periodOrigin;
 
     function replaceTemplateValues(obj,scopedVars, attrList) {
       if (obj.type === 'in') {
@@ -81,9 +82,20 @@ function (angular, _, dateMath, moment) {
     };
 
     this.testDatasource = function() {
+      if(this.dataSource.periodOrigin!=""){
+          if(!this.isIsoDate(this.dataSource.periodOrigin)){
+              return { status: "error", message: "Origin time must be in ISO8601 format", title: "Success" };
+          }
+      }
       return this._get('/druid/v2/datasources').then(function () {
         return { status: "success", message: "Druid Data source is working", title: "Success" };
       });
+    };
+
+    this.isIsoDate = function(str) {
+      if (!/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/.test(str)) return false;
+        var d = new Date(str);
+         return d.toISOString()===str;
     };
 
     //Get list of available datasources
@@ -159,10 +171,18 @@ function (angular, _, dateMath, moment) {
         //Round up to start of an interval
         //Width of bar chars in Grafana is determined by size of the smallest interval
         var roundedFrom = granularity === "all" ? from : roundUpStartTime(from, granularity);
-        if(dataSource.periodGranularity!=""){
-            if(granularity==='day'){
-                granularity = {"type": "period", "period": "P1D", "timeZone": dataSource.periodGranularity}
-            }
+          if (dataSource.periodGranularity != "") {
+              granularity = {"type": "period", "timeZone": dataSource.periodGranularity}
+              if (granularity === 'day') {
+                  granularity["period"] = "P1D"
+              } else if (granularity === 'week') {
+                  granularity["period"] = "P1W"
+              } else if (granularity === 'month') {
+                  granularity["period"] = "P1M"
+              }
+              if (dataSource.periodOrigin != "") {
+                  granularity["origin"] = dataSource.periodOrigin
+              }
         }
         return dataSource._doQuery(roundedFrom, to, granularity, target, options.scopedVars);
       });
