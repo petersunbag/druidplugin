@@ -62,16 +62,16 @@ function (angular, _, dateMath, moment) {
     ];
 
     var GRANULARITIESPERIODLOOKUP = {
-        'second': '1S',
-        'minute': '0H1M',
-        'fifteen_minute': '0H15M',
-        'thirty_minute': '0H30M',
-        'hour': '1H',
-        'day': '1D',
-        'week': '7D',
-        'month': '1M',
-        'quarter': '3M',
-        'year': '1Y'
+        'second': 'P1S',
+        'minute': 'P0H1M',
+        'fifteen_minute': 'P0H15M',
+        'thirty_minute': 'P0H30M',
+        'hour': 'P1H',
+        'day': 'P1D',
+        'week': 'P7D',
+        'month': 'P1M',
+        'quarter': 'P3M',
+        'year': 'P1Y'
     };
 
 
