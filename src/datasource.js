@@ -431,7 +431,31 @@ function (angular, _, dateMath, moment) {
       return moment(ts).format('X')*1000;
     }
 
+    function flattenBucketsData(md, metrics) {
+      var bucketMetrics = []
+      md.forEach(function (item, idx) {
+        metrics.forEach(function (metric) {
+          if (typeof item.result[metric] == 'object' && item.result[metric]['breaks'] && item.result[metric]['counts']) {
+            for(var i = 0; i < item.result[metric]['breaks'].length-1; i++){
+              var key = metric + ":" + item.result[metric]['breaks'][i] + "-" + item.result[metric]['breaks'][i+1]
+              item.result[key] = item.result[metric]['counts'][i]
+              if (idx == 0) {
+                bucketMetrics.push(key)
+              }
+            }
+            delete item.result[metric]
+          } else {
+            bucketMetrics.push(metric)
+          }
+        })
+      })
+      return [md, bucketMetrics]
+    }
+
     function convertTimeSeriesData(md, metrics) {
+      var f = flattenBucketsData(md, metrics)
+      md = f[0]
+      metrics = f[1]
       return metrics.map(function (metric) {
         return {
           target: metric,
