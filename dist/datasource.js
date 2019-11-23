@@ -636,12 +636,12 @@ function (angular, _, dateMath, moment) {
       var result = {};
       for(var i = 0; i < eventList.length; i++){
         var event = eventList[i].event;
-        var timestamp = event.timestamp;
+        var timestamp = event.__time;
         if(_.isEmpty(timestamp)) {
           continue;
         }
         for(var key in event) {
-          if(key !== "timestamp") {
+          if(key !== "__time") {
             if(!result[key]){
               result[key] = {"target":key, "datapoints":[]};
             }
