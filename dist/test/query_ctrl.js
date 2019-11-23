@@ -270,6 +270,11 @@ var DruidQueryCtrl = (function (_super) {
         }
         this.targetBlur();
     };
+    DruidQueryCtrl.prototype.editPostAggregator = function (index) {
+        this.addPostAggregatorMode = true;
+        var delPostAggregator = this.target.postAggregators.splice(index, 1);
+        this.target.currentPostAggregator = delPostAggregator[0];
+    };
     DruidQueryCtrl.prototype.removePostAggregator = function (index) {
         this.target.postAggregators.splice(index, 1);
         this.targetBlur();

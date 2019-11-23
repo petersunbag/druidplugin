@@ -329,6 +329,12 @@ export class DruidQueryCtrl extends QueryCtrl {
       this.targetBlur();
     }
 
+    editPostAggregator(index) {
+      this.addPostAggregatorMode = true;
+      var delPostAggregator = this.target.postAggregators.splice(index, 1);
+      this.target.currentPostAggregator = delPostAggregator[0];
+    }
+
     removePostAggregator(index) {
       this.target.postAggregators.splice(index, 1);
       this.targetBlur();
