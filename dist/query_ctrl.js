@@ -49,7 +49,7 @@ System.register(['lodash', './sdk/sdk'], function(exports_1) {
                         "arithmetic": this.validateArithmeticPostAggregator.bind(this),
                         "max": this.validateMaxPostAggregator.bind(this),
                         "min": this.validateMinPostAggregator.bind(this),
-                        "numBuckets": this.validateNumBucketsPostAggregator.bind(this),
+                        "equalBuckets": this.validateEqualBucketsPostAggregator.bind(this),
                         "quantile": this.validateQuantilePostAggregator.bind(this)
                     };
                     this.arithmeticPostAggregatorFns = { '+': null, '-': null, '*': null, '/': null };
@@ -497,8 +497,8 @@ System.register(['lodash', './sdk/sdk'], function(exports_1) {
                     }
                     return null;
                 };
-                DruidQueryCtrl.prototype.validateNumBucketsPostAggregator = function (target) {
-                    var err = this.validateSimplePostAggregator('numBuckets', target);
+                DruidQueryCtrl.prototype.validateEqualBucketsPostAggregator = function (target) {
+                    var err = this.validateSimplePostAggregator('equalBuckets', target);
                     if (err) {
                         return err;
                     }

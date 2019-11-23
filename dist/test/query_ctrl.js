@@ -39,7 +39,7 @@ var DruidQueryCtrl = (function (_super) {
             "arithmetic": this.validateArithmeticPostAggregator.bind(this),
             "max": this.validateMaxPostAggregator.bind(this),
             "min": this.validateMinPostAggregator.bind(this),
-            "numBuckets": this.validateNumBucketsPostAggregator.bind(this),
+            "equalBuckets": this.validateEqualBucketsPostAggregator.bind(this),
             "quantile": this.validateQuantilePostAggregator.bind(this)
         };
         this.arithmeticPostAggregatorFns = { '+': null, '-': null, '*': null, '/': null };
@@ -487,8 +487,8 @@ var DruidQueryCtrl = (function (_super) {
         }
         return null;
     };
-    DruidQueryCtrl.prototype.validateNumBucketsPostAggregator = function (target) {
-        var err = this.validateSimplePostAggregator('numBuckets', target);
+    DruidQueryCtrl.prototype.validateEqualBucketsPostAggregator = function (target) {
+        var err = this.validateSimplePostAggregator('equalBuckets', target);
         if (err) {
             return err;
         }
