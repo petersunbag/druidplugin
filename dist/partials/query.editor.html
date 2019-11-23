@@ -477,6 +477,14 @@
           </a>
         </label>
       </div>
+      <div ng-switch-when="equalBuckets">
+        <label class="gf-form-label">
+          {{postAggregator.type}}:&nbsp;name&nbsp;=&nbsp;{{postAggregator.name}},&nbsp;field&nbsp;=&nbsp;{{postAggregator.fieldName}}&nbsp;num&nbsp;=&nbsp;{{postAggregator.numBuckets}}
+          <a ng-click="ctrl.removePostAggregator($index)">
+            <i class="fa fa-remove"></i>
+          </a>
+        </label>
+      </div>
       <div ng-switch-when="quantile">
         <label class="gf-form-label">
           {{postAggregator.type}}:&nbsp;name&nbsp;=&nbsp;{{postAggregator.name}},&nbsp;field&nbsp;=&nbsp;{{postAggregator.fieldName}}, &nbsp;prob&nbsp;=&nbsp;{{postAggregator.probability}}
@@ -514,6 +522,13 @@
   <div class="gf-form" ng-show="ctrl.addPostAggregatorMode" ng-switch on="ctrl.target.currentPostAggregator.type">
     <input type="text" ng-switch-when="min" class="input-small gf-form-input" spellcheck="false" ng-model="ctrl.target.currentPostAggregator.name" placeholder="output name" ng-blur="ctrl.targetBlur()">
     <input type="text" ng-switch-when="min" class="input-small gf-form-input" spellcheck="false" ng-model="ctrl.target.currentPostAggregator.fieldName" placeholder="agg name" ng-blur="ctrl.targetBlur()">
+  </div>
+
+  <!-- equalBuckets -->
+  <div class="gf-form" ng-show="ctrl.addPostAggregatorMode" ng-switch on="ctrl.target.currentPostAggregator.type">
+    <input type="text" ng-switch-when="equalBuckets" class="input-small gf-form-input" spellcheck="false" ng-model="ctrl.target.currentPostAggregator.name" placeholder="output name" ng-blur="ctrl.targetBlur()">
+    <input type="text" ng-switch-when="equalBuckets" class="input-small gf-form-input" spellcheck="false" ng-model="ctrl.target.currentPostAggregator.fieldName" placeholder="agg name" ng-blur="ctrl.targetBlur()">
+    <input type="text" ng-switch-when="equalBuckets" class="input-small gf-form-input" spellcheck="false" ng-model="ctrl.target.currentPostAggregator.numBuckets" placeholder="buckets num" ng-blur="ctrl.targetBlur()">
   </div>
 
   <!-- quantile -->

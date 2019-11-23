@@ -49,6 +49,7 @@ export declare class DruidQueryCtrl extends QueryCtrl {
         "arithmetic": any;
         "max": any;
         "min": any;
+        "numBuckets": any;
         "quantile": any;
     };
     arithmeticPostAggregatorFns: {
@@ -115,6 +116,7 @@ export declare class DruidQueryCtrl extends QueryCtrl {
     validateSimplePostAggregator(type: any, target: any): string;
     validateMaxPostAggregator(target: any): string;
     validateMinPostAggregator(target: any): string;
+    validateNumBucketsPostAggregator(target: any): string;
     validateQuantilePostAggregator(target: any): string;
     validateArithmeticPostAggregator(target: any): string;
     validateTarget(): any;

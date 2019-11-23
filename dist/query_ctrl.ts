@@ -54,6 +54,7 @@ export class DruidQueryCtrl extends QueryCtrl {
       "arithmetic": this.validateArithmeticPostAggregator.bind(this),
       "max": this.validateMaxPostAggregator.bind(this),
       "min": this.validateMinPostAggregator.bind(this),
+      "numBuckets": this.validateNumBucketsPostAggregator.bind(this),
       "quantile": this.validateQuantilePostAggregator.bind(this)
     };
 
@@ -561,6 +562,12 @@ export class DruidQueryCtrl extends QueryCtrl {
 
     validateMinPostAggregator(target) {
       var err = this.validateSimplePostAggregator('min', target);
+      if (err) { return err; }
+      return null;
+    }
+
+    validateNumBucketsPostAggregator(target) {
+      var err = this.validateSimplePostAggregator('numBuckets', target);
       if (err) { return err; }
       return null;
     }
