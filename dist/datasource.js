@@ -645,7 +645,7 @@ function (angular, _, dateMath, moment) {
             if(!result[key]){
               result[key] = {"target":key, "datapoints":[]};
             }
-            result[key].datapoints.push([event[key], timestamp]);
+            result[key].datapoints.push([event[key], formatTimestamp(timestamp)]);
           }
         }
       }
