@@ -74,6 +74,8 @@ function (angular, _, dateMath, moment) {
       "cardinality": _.partialRight(replaceTemplateValues, ['fieldNames']),
       "longSum": _.partialRight(replaceTemplateValues, ['fieldName']),
       "doubleSum": _.partialRight(replaceTemplateValues, ['fieldName']),
+      "doubleMax": _.partialRight(replaceTemplateValues, ['fieldName']),
+      "doubleMin": _.partialRight(replaceTemplateValues, ['fieldName']),
       "approxHistogramFold": _.partialRight(replaceTemplateValues, ['fieldName']),
       "hyperUnique": _.partialRight(replaceTemplateValues, ['fieldName']),
       "json": _.partialRight(replaceTemplateValues, ['value']),
