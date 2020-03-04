@@ -449,7 +449,9 @@ function (angular, _, dateMath, moment) {
             }
             delete item.result[metric]
           } else {
-            bucketMetrics.push(metric)
+            if (idx == 0) {
+              bucketMetrics.push(metric)
+            }
           }
         })
       })
