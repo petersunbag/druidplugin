@@ -40,6 +40,8 @@ System.register(['lodash', './sdk/sdk'], function(exports_1) {
                         "cardinality": lodash_1["default"].partial(this.validateCardinalityAggregator.bind(this), 'cardinality'),
                         "longSum": lodash_1["default"].partial(this.validateSimpleAggregator.bind(this), 'longSum'),
                         "doubleSum": lodash_1["default"].partial(this.validateSimpleAggregator.bind(this), 'doubleSum'),
+                        "doubleMax": lodash_1["default"].partial(this.validateSimpleAggregator.bind(this), 'doubleMax'),
+                        "doubleMin": lodash_1["default"].partial(this.validateSimpleAggregator.bind(this), 'doubleMin'),
                         "approxHistogramFold": this.validateApproxHistogramFoldAggregator.bind(this),
                         "hyperUnique": lodash_1["default"].partial(this.validateSimpleAggregator.bind(this), 'hyperUnique'),
                         "json": this.validateJsonAggregator,
