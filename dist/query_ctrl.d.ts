@@ -40,6 +40,8 @@ export declare class DruidQueryCtrl extends QueryCtrl {
         "cardinality": any;
         "longSum": any;
         "doubleSum": any;
+        "doubleMax": any;
+        "doubleMin": any;
         "approxHistogramFold": any;
         "hyperUnique": any;
         "json": (target: any) => string;
